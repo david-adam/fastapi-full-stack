@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from mimetypes import init
 from typing import Annotated
-from pydantic import ConfigDict, EmailStr, Field
+from pydantic import ConfigDict, EmailStr, Field, computed_field
 from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
 
@@ -10,8 +10,9 @@ from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
 class UserBase(SQLModel):
     username: Annotated[str, Field(min_length=1, max_length=50, unique=True, nullable=False)]
     email: Annotated[EmailStr, Field(max_length=120, unique=True, nullable=False)]
-    image_file: Annotated[str | None, Field(max_length=200, nullable=True, default=None)]
+    image_file: Annotated[str | None, Field(min_length=1, max_length=200, nullable=True, default=None)]
     
+    @computed_field
     @property
     def image_path(self) -> str:
         if self.image_file:
@@ -22,11 +23,17 @@ class User(UserBase, table=True):
     __tablename__ = "users"
     id: Annotated[int | None, Field(default=None, primary_key=True, index=True)]
     posts: Mapped[list["Post"]] = Relationship(
-        sa_relationship=relationship("Post", back_populates="author"))
+        sa_relationship=relationship("Post", back_populates="author", cascade="all, delete-orphan"))
 
 
 class UserCreate(UserBase):
     pass
+
+
+class UserUpdate(UserBase):
+    username: Annotated[str | None, Field(default=None, min_length=1, max_length=50, unique=True, nullable=False)]
+    email: Annotated[EmailStr | None, Field(default=None, max_length=120, unique=True, nullable=False)]
+    image_file: Annotated[str | None, Field(default=None, min_length=1, max_length=200, nullable=True)]
 
 
 class UserResponse(UserBase):
