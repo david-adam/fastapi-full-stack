@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import models
-from sqlmodel import or_, col, select, Session
+from sqlmodel import col, select, Session
 
 
 
@@ -16,23 +16,6 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 templates = Jinja2Templates(directory="templates")
 
 models.create_db_and_tables()
-
-posts: list[dict] = [
-    {
-        "id": 1,
-        "author": "Corey Schafer",
-        "title": "FastAPI is Awesome",
-        "content": "This framework is really easy to use and super fast.",
-        "date_posted": "April 20, 2025",
-    },
-    {
-        "id": 2,
-        "author": "Jane Doe",
-        "title": "Python is Great for Web Development",
-        "content": "Python is a great language for web development, and FastAPI makes it even better.",
-        "date_posted": "April 21, 2025",
-    },
-]
 
 
 @app.get("/", include_in_schema=False, name="home")
@@ -51,7 +34,7 @@ def home(request: Request, db: Annotated[Session, Depends(models.get_db)]):
 @app.get("/posts/{post_id}", include_in_schema=False)
 def post_page(request: Request, post_id: int, db: Annotated[Session, Depends(models.get_db)]):
     
-    post = db.exec(select(models.Post).where(models.Post.id == post_id)).first()
+    post = db.exec(select(models.Post).where(col(models.Post.id) == post_id)).first()
 
     if post:
         title = post.title[:50]
@@ -69,14 +52,14 @@ def user_posts_page(
     user_id: int,
     db: Annotated[Session, Depends(models.get_db)],
 ):
-    result = db.exec(select(models.User).where(models.User.id == user_id))
+    result = db.exec(select(models.User).where(col(models.User.id) == user_id))
     user = result.first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    result = db.exec(select(models.Post).where(models.Post.user_id == user_id))
+    result = db.exec(select(models.Post).where(col(models.Post.user_id) == user_id))
     posts = result.all()
     return templates.TemplateResponse(
         request,
@@ -92,7 +75,7 @@ def user_posts_page(
 )
 def create_user(user: models.UserCreate, db: Annotated[Session, Depends(models.get_db)]):
     result = db.exec(
-        select(models.User).where(models.User.username == user.username),
+        select(models.User).where(col(models.User.username) == user.username),
     )
     existing_user = result.first()
     if existing_user:
@@ -101,7 +84,7 @@ def create_user(user: models.UserCreate, db: Annotated[Session, Depends(models.g
             detail="Username already exists",
         )
     result = db.exec(
-        select(models.User).where(models.User.email == user.email),
+        select(models.User).where(col(models.User.email) == user.email),
     )
     existing_email = result.first()
     if existing_email:
@@ -122,7 +105,7 @@ def create_user(user: models.UserCreate, db: Annotated[Session, Depends(models.g
 @app.get("/api/users/{user_id}", response_model=models.UserResponse)
 def get_user(user_id: int, db: Annotated[Session, Depends(models.get_db)]):
     result = db.exec(
-        select(models.User).where(models.User.id == user_id),
+        select(models.User).where(col(models.User.id) == user_id),
     )
     user = result.first()
     if user:
@@ -132,14 +115,14 @@ def get_user(user_id: int, db: Annotated[Session, Depends(models.get_db)]):
 
 @app.get("/api/users/{user_id}/posts", response_model=list[models.PostResponse])
 def get_user_posts(user_id: int, db: Annotated[Session, Depends(models.get_db)]):
-    result = db.exec(select(models.User).where(models.User.id == user_id))
+    result = db.exec(select(models.User).where(col(models.User.id) == user_id))
     user = result.first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    result = db.exec(select(models.Post).where(models.Post.user_id == user_id))
+    result = db.exec(select(models.Post).where(col(models.Post.user_id) == user_id))
     posts = result.all()
     return posts
 
@@ -149,7 +132,7 @@ def get_user_posts(user_id: int, db: Annotated[Session, Depends(models.get_db)])
     status_code=status.HTTP_201_CREATED
 )
 def create_post(post: models.PostCreate, db: Annotated[Session, Depends(models.get_db)]):
-    result = db.exec(select(models.User).where(models.User.id == post.user_id))
+    result = db.exec(select(models.User).where(col(models.User.id) == post.user_id))
     user = result.first()
     if not user:
         raise HTTPException(
@@ -177,7 +160,7 @@ def get_posts(db: Annotated[Session, Depends(models.get_db)]):
 
 @app.get("/api/posts/{post_id}", response_model=models.PostResponse)
 def get_post(post_id: int, db: Annotated[Session, Depends(models.get_db)]):
-    result = db.exec(select(models.Post).where(models.Post.id == post_id))
+    result = db.exec(select(models.Post).where(col(models.Post.id) == post_id))
     post = result.first()
     if post:
         return post
