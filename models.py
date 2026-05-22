@@ -1,6 +1,5 @@
 from __future__ import annotations
 from datetime import UTC, datetime
-from mimetypes import init
 from typing import Annotated
 from pydantic import ConfigDict, EmailStr, Field, computed_field
 from sqlalchemy.orm import Mapped, relationship

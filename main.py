@@ -1,4 +1,3 @@
-from email.policy import HTTP
 from typing import Annotated
 from fastapi import FastAPI, Request, status, HTTPException, Depends
 from fastapi.exceptions import RequestValidationError
@@ -6,7 +5,6 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.status import HTTP_103_EARLY_HINTS
 from . import models
 from sqlmodel import col, select, Session
 from contextlib import asynccontextmanager
