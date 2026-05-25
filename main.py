@@ -1,4 +1,3 @@
-import http
 from fastapi.responses import JSONResponse
 from typing import Annotated
 from fastapi import FastAPI, Request, status, HTTPException, Depends
