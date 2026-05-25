@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import timezone, datetime
 from typing import Annotated
-from pydantic import ConfigDict, EmailStr, Field, computed_field
+from pydantic import ConfigDict, EmailStr, computed_field
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.asyncio.session import AsyncSession
