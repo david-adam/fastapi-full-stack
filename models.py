@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 from typing import Annotated
 from pydantic import ConfigDict, EmailStr, Field, computed_field
 from sqlalchemy.orm import Mapped, relationship
-from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlmodel import Field, SQLModel, Relationship
 
 
 class UserBase(SQLModel):
@@ -70,23 +72,21 @@ class PostResponse(PostBase):
     author: UserResponse
 
 
-DATABASE_URL = "sqlite:///./blog.db"
+DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
 
-engine = create_engine(
+engine = create_async_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False}
 )
 
-engine.execution_options(autocommit=False, autoflush=False)
 
+async_sessioin = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+async def get_db():
+    async with async_sessioin() as session:
+        yield session
 
-def get_db():
-    with Session(engine) as db:
-        yield db
-
-
-if __name__ == "__main__":
-    create_db_and_tables()
