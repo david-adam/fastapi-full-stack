@@ -108,7 +108,7 @@ async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(models.g
 
 
 
-@router.get("/user_id}/posts", response_model=list[models.PostResponse])
+@router.get("/{user_id}/posts", response_model=list[models.PostResponse])
 async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(models.get_db)]):
     result = await db.execute(select(models.User).where(col(models.User.id) == user_id))
     user = result.scalars().first()
