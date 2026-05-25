@@ -33,7 +33,7 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 @app.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(models.get_db)]):
     
-    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)))
+    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc()))
     posts = results.scalars().all()
 
     return templates.TemplateResponse(request, 

@@ -1,17 +1,18 @@
 from __future__ import annotations
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Annotated
 from pydantic import ConfigDict, EmailStr, Field, computed_field
 from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import SQLModel, Relationship, Field as SQLModelField
 
 
 class UserBase(SQLModel):
-    username: Annotated[str, Field(min_length=1, max_length=50, unique=True, nullable=False)]
-    email: Annotated[EmailStr, Field(max_length=120, unique=True, nullable=False)]
-    image_file: Annotated[str | None, Field(min_length=1, max_length=200, nullable=True, default=None)]
+    username: Annotated[str, SQLModelField(min_length=1, max_length=50, unique=True, nullable=False)]
+    email: Annotated[EmailStr, SQLModelField(max_length=120, unique=True, nullable=False)]
+    image_file: Annotated[str | None, SQLModelField(min_length=1, max_length=200, nullable=True, default=None)]
     
     @computed_field
     @property
@@ -22,7 +23,7 @@ class UserBase(SQLModel):
 
 class User(UserBase, table=True):
     __tablename__ = "users"
-    id: Annotated[int | None, Field(default=None, primary_key=True, index=True)]
+    id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)]
     posts: Mapped[list["Post"]] = Relationship(
         sa_relationship=relationship("Post", back_populates="author", cascade="all, delete-orphan"))
 
@@ -32,26 +33,28 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(UserBase):
-    username: Annotated[str | None, Field(default=None, min_length=1, max_length=50, unique=True, nullable=False)]
-    email: Annotated[EmailStr | None, Field(default=None, max_length=120, unique=True, nullable=False)]
-    image_file: Annotated[str | None, Field(default=None, min_length=1, max_length=200, nullable=True)]
+    username: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=50, unique=True, nullable=False)]
+    email: Annotated[EmailStr | None, SQLModelField(default=None, max_length=120, unique=True, nullable=False)]
+    image_file: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=200, nullable=True)]
 
 
 class UserResponse(UserBase):
-    id: Annotated[int | None, Field(default=None, primary_key=True, index=True)]
+    id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)]
 
 
 
 class PostBase(SQLModel):
-    title: Annotated[str, Field(min_length=1, max_length=100, index=True)]
-    content: Annotated[str, Field(min_length=1)]
+    title: Annotated[str, SQLModelField(min_length=1, max_length=100, index=True)]
+    content: Annotated[str, SQLModelField(min_length=1)]
 
 
 class Post(PostBase, table=True):
     __tablename__ = "posts"
-    id: Annotated[int | None, Field(default=None, primary_key=True)]
-    date_posted: Annotated[datetime, Field(default=datetime.now(tz=UTC))]
-    user_id: Annotated[int, Field(foreign_key="users.id", nullable=False, index=True)]
+    id: Annotated[int | None, SQLModelField(default=None, primary_key=True)]
+    date_posted: Annotated[datetime, SQLModelField(
+        sa_column=Column(DateTime(timezone=True)),
+        default_factory=lambda: datetime.now(tz=timezone.utc))]
+    user_id: Annotated[int, SQLModelField(foreign_key="users.id", nullable=False, index=True)]
     author: Mapped[User | None] = Relationship(
         sa_relationship=relationship("User", back_populates="posts"))
 
@@ -60,8 +63,8 @@ class PostCreate(PostBase):
 
 
 class PostUpdate(PostBase):
-    title: Annotated[str | None, Field(default=None, min_length=1, max_length=100)]
-    content: Annotated[str | None, Field(default=None, min_length=1)]
+    title: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=100)]
+    content: Annotated[str | None, SQLModelField(default=None, min_length=1)]
 
 
 class PostResponse(PostBase):
