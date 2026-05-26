@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import timezone, datetime
 from typing import Annotated
-from pydantic import ConfigDict, EmailStr, computed_field
+from pydantic import ConfigDict, EmailStr, computed_field, BaseModel
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -11,8 +11,7 @@ from sqlmodel import SQLModel, Relationship, Field as SQLModelField
 
 class UserBase(SQLModel):
     username: Annotated[str, SQLModelField(min_length=1, max_length=50, unique=True, nullable=False)]
-    email: Annotated[EmailStr, SQLModelField(max_length=120, unique=True, nullable=False)]
-    image_file: Annotated[str | None, SQLModelField(min_length=1, max_length=200, nullable=True, default=None)]
+    image_file: Annotated[str | None, SQLModelField(max_length=200, nullable=True, default=None)]
     
     @computed_field
     @property
@@ -24,12 +23,15 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     __tablename__ = "users"
     id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)]
+    email: Annotated[EmailStr, SQLModelField(max_length=120, unique=True, nullable=False)]
+    password_hash: Annotated[str, SQLModelField(max_length=200, nullable=False)]
     posts: Mapped[list["Post"]] = Relationship(
         sa_relationship=relationship("Post", back_populates="author", cascade="all, delete-orphan"))
 
 
 class UserCreate(UserBase):
-    pass
+    email: Annotated[EmailStr, SQLModelField(max_length=120, unique=True, nullable=False)]
+    password: Annotated[str, SQLModelField(min_length=8)]
 
 
 class UserUpdate(UserBase):
@@ -38,9 +40,18 @@ class UserUpdate(UserBase):
     image_file: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=200, nullable=True)]
 
 
-class UserResponse(UserBase):
-    id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)]
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
+
+class UserPublic(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+class UserPrivate(UserPublic):
+    email: EmailStr
 
 
 class PostBase(SQLModel):
@@ -72,7 +83,7 @@ class PostResponse(PostBase):
     id: int
     user_id: int
     date_posted: datetime
-    author: UserResponse
+    author: UserPublic
 
 
 DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
