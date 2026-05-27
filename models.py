@@ -37,7 +37,6 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     username: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=50, unique=True, nullable=False)]
     email: Annotated[EmailStr | None, SQLModelField(default=None, max_length=120, unique=True, nullable=False)]
-    image_file: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=200, nullable=True)]
 
 
 class Token(BaseModel):
