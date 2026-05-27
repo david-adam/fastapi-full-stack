@@ -70,7 +70,7 @@ class Post(PostBase, table=True):
         sa_relationship=relationship("User", back_populates="posts"))
 
 class PostCreate(PostBase):
-    user_id: int
+    pass
 
 
 class PostUpdate(PostBase):
