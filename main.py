@@ -5,12 +5,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
-from . import models
+import models
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from contextlib import asynccontextmanager
-from .routers import posts, users
+from routers import posts, users
 
 @asynccontextmanager
 async def create_db_resource(_app: FastAPI):
@@ -33,7 +33,7 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 @app.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(models.get_db)]):
     
-    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc()))
+    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())) # type: ignore
     posts = results.scalars().all()
 
     return templates.TemplateResponse(request, 

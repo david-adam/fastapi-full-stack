@@ -1,10 +1,10 @@
 from typing import Annotated
 from fastapi import APIRouter, status, HTTPException, Depends
-from .. import models
+import models
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import col, select
-from ..auth import CurrentUser
+from sqlmodel import col, select, desc
+from auth import CurrentUser
 
 router = APIRouter()
 
@@ -16,11 +16,12 @@ router = APIRouter()
 )
 async def create_post(post: models.PostCreate, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(models.get_db)]):
 
-    new_post = models.Post(
+    new_post = models.Post( # type: ignore
         title=post.title,
         content=post.content,
-        user_id=current_user.id
+        user_id=current_user.id # type: ignore
     )
+
     db.add(new_post)
     await db.commit()
     await db.refresh(new_post, attribute_names=["author"])
@@ -30,7 +31,7 @@ async def create_post(post: models.PostCreate, current_user: CurrentUser, db: An
 
 @router.get("/", response_model=list[models.PostResponse])
 async def get_posts(db: Annotated[AsyncSession, Depends(models.get_db)]):
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc()))
+    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())) # type: ignore
     posts = result.scalars().all()
     return posts
 

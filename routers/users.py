@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, status, HTTPException, Depends, UploadFile
-from .. import models
+import models
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import func, col, select
@@ -9,14 +9,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from PIL import UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
 
-from ..image_utils import delete_profile_image, process_profile_image
+from image_utils import delete_profile_image, process_profile_image
 
-from ..auth import (create_access_token, 
+from auth import (create_access_token, 
                     hash_password, 
                     verify_password, 
                     CurrentUser
 )
-from ..config import settings
+from config import settings
 
 router = APIRouter()
 
@@ -179,7 +179,7 @@ async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(model
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(col(models.Post.user_id) == user_id).order_by(models.Post.date_posted.desc()))
+    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(col(models.Post.user_id) == user_id).order_by(models.Post.date_posted.desc())) # type: ignore
     posts = results.scalars().all()
     return posts
 

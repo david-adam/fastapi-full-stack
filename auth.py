@@ -4,12 +4,12 @@ import jwt
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 
-from .config import settings
+from config import settings
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from . import models
+import models
 
 password_hash = PasswordHash.recommended()
 

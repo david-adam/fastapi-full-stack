@@ -11,7 +11,7 @@ from sqlmodel import SQLModel, Relationship, Field as SQLModelField
 
 class UserBase(SQLModel):
     username: Annotated[str, SQLModelField(min_length=1, max_length=50, unique=True, nullable=False)]
-    image_file: Annotated[str | None, SQLModelField(max_length=200, nullable=True, default=None)]
+    image_file: Annotated[str | None, SQLModelField(max_length=200, nullable=True, default=None)] = None
     
     @computed_field
     @property
@@ -21,8 +21,8 @@ class UserBase(SQLModel):
         return "/media/profile_pics/default.jpg"
 
 class User(UserBase, table=True):
-    __tablename__ = "users"
-    id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)]
+    __tablename__ = "users" # type: ignore
+    id: Annotated[int | None, SQLModelField(default=None, primary_key=True, index=True)] = None
     email: Annotated[EmailStr, SQLModelField(max_length=120, unique=True, nullable=False)]
     password_hash: Annotated[str, SQLModelField(max_length=200, nullable=False)]
     posts: Mapped[list["Post"]] = Relationship(
@@ -35,7 +35,7 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(UserBase):
-    username: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=50, unique=True, nullable=False)]
+    username: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=50, unique=True, nullable=False)] # type: ignore
     email: Annotated[EmailStr | None, SQLModelField(default=None, max_length=120, unique=True, nullable=False)]
 
 
@@ -59,8 +59,8 @@ class PostBase(SQLModel):
 
 
 class Post(PostBase, table=True):
-    __tablename__ = "posts"
-    id: Annotated[int | None, SQLModelField(default=None, primary_key=True)]
+    __tablename__ = "posts" # type: ignore
+    id: Annotated[int | None, SQLModelField(default=None, primary_key=True)] = None
     date_posted: Annotated[datetime, SQLModelField(
         sa_column=Column(DateTime(timezone=True)),
         default_factory=lambda: datetime.now(tz=timezone.utc))]
@@ -73,8 +73,8 @@ class PostCreate(PostBase):
 
 
 class PostUpdate(PostBase):
-    title: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=100)]
-    content: Annotated[str | None, SQLModelField(default=None, min_length=1)]
+    title: Annotated[str | None, SQLModelField(default=None, min_length=1, max_length=100)] # type: ignore
+    content: Annotated[str | None, SQLModelField(default=None, min_length=1)] # type: ignore
 
 
 class PostResponse(PostBase):
