@@ -7,11 +7,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select, func
 from auth import CurrentUser
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 
 
-@router.get("/", response_model=models.PaginatedPostsResponse)
+@router.get("", response_model=models.PaginatedPostsResponse)
 async def get_posts(db: Annotated[AsyncSession, Depends(models.get_db)],
                     skip: Annotated[int, Query(ge=0)] =0,
                     limit: Annotated[int, Query(ge=1, le=100)] = 10
@@ -39,7 +39,7 @@ async def get_posts(db: Annotated[AsyncSession, Depends(models.get_db)],
     )
 
 
-@router.post("/", 
+@router.post("", 
     response_model=models.PostResponse,
     status_code=status.HTTP_201_CREATED
 )
