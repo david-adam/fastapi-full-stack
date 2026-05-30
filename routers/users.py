@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, status, HTTPException, Depends, UploadFile
+from fastapi import APIRouter, status, HTTPException, Depends, UploadFile, Query
 import models
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -170,18 +170,47 @@ async def delete_user(user_id: int, current_user: CurrentUser, db: Annotated[Asy
 
 
 
-@router.get("/{user_id}/posts", response_model=list[models.PostResponse])
-async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(models.get_db)]):
-    result = await db.execute(select(models.User).where(col(models.User.id) == user_id))
+@router.get("/{user_id}/posts", response_model=models.PaginatedPostsResponse)
+async def get_user_posts(
+    user_id: int,
+    db: Annotated[AsyncSession, Depends(models.get_db)],
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = settings.posts_per_page,
+):
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(col(models.Post.user_id) == user_id).order_by(models.Post.date_posted.desc())) # type: ignore
-    posts = results.scalars().all()
-    return posts
+
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(models.Post)
+        .where(models.Post.user_id == user_id),
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc()) # type: ignore
+        .offset(skip)
+        .limit(limit),
+    )
+    posts = result.scalars().all()
+
+    has_more = skip + len(posts) < total
+
+    return models.PaginatedPostsResponse(
+        posts=[models.PostResponse.model_validate(post) for post in posts],
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=has_more,
+    )
 
 
 @router.patch("/{user_id}/picture", response_model=models.UserPrivate)

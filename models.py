@@ -85,6 +85,14 @@ class PostResponse(PostBase):
     author: UserPublic
 
 
+class PaginatedPostsResponse(BaseModel):
+    posts: list[PostResponse]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool
+
+
 DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
 
 engine = create_async_engine(

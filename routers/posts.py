@@ -1,16 +1,45 @@
+from models import PaginatedPostsResponse
 from typing import Annotated
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Query
 import models
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import col, select, desc
+from sqlmodel import col, select, func
 from auth import CurrentUser
 
 router = APIRouter()
 
 
 
-@router.post("", 
+@router.get("/", response_model=models.PaginatedPostsResponse)
+async def get_posts(db: Annotated[AsyncSession, Depends(models.get_db)],
+                    skip: Annotated[int, Query(ge=0)] =0,
+                    limit: Annotated[int, Query(ge=1, le=100)] = 10
+):
+
+    count_result =  await db.execute(select(func.count()).select_from(models.Post))
+    total = count_result.scalar() or 0
+
+    result = await db.execute(select(models.Post)
+                            .options(selectinload(models.Post.author))
+                            .order_by(models.Post.date_posted.desc()) # type: ignore
+                            .offset(skip)
+                            .limit(limit)
+    ) 
+    posts = result.scalars().all()
+
+    has_more = skip + len(posts) < total
+
+    return PaginatedPostsResponse(
+        posts=[models.PostResponse.model_validate(post) for post in posts],
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=has_more
+    )
+
+
+@router.post("/", 
     response_model=models.PostResponse,
     status_code=status.HTTP_201_CREATED
 )
@@ -27,13 +56,6 @@ async def create_post(post: models.PostCreate, current_user: CurrentUser, db: An
     await db.refresh(new_post, attribute_names=["author"])
     return new_post
 
-
-
-@router.get("/", response_model=list[models.PostResponse])
-async def get_posts(db: Annotated[AsyncSession, Depends(models.get_db)]):
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())) # type: ignore
-    posts = result.scalars().all()
-    return posts
 
 
 @router.get("/{post_id}", response_model=models.PostResponse)
