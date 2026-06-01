@@ -5,22 +5,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
-import models
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select, func
 from contextlib import asynccontextmanager
 from routers import posts, users
 from config import settings
+import models
+import database
 
 @asynccontextmanager
 async def create_db_resource(_app: FastAPI):
-    # start up
-    async with models.engine.begin() as conn:
-        await conn.run_sync(models.SQLModel.metadata.create_all)
+
     yield
     # shutdown
-    await models.engine.dispose()
+    await database.engine.dispose()
 
 app = FastAPI(lifespan=create_db_resource )
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -32,7 +32,7 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
-async def home(request: Request, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def home(request: Request, db: Annotated[AsyncSession, Depends(database.get_db)]):
     
     count_result =  await db.execute(select(func.count()).select_from(models.Post))
     total = count_result.scalar() or 0
@@ -58,7 +58,7 @@ async def home(request: Request, db: Annotated[AsyncSession, Depends(models.get_
 
 
 @app.get("/posts/{post_id}", include_in_schema=False)
-async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, Depends(database.get_db)]):
     
     result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(col(models.Post.id) == post_id))
     post = result.scalars().first()
@@ -77,7 +77,7 @@ async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, 
 async def user_posts_page(
     request: Request,
     user_id: int,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()

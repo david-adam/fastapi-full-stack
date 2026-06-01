@@ -31,5 +31,11 @@ def delete_profile_image(filename: str | None) -> None:
         return
 
     filepath = PROFILE_PICS_DIR / filename
-    if filepath.exists():
+
+    if not filepath.exists():
+        return
+
+    try:
         filepath.unlink()
+    except OSError as e:
+        print(f"Error deleting file {filepath}: {e}")

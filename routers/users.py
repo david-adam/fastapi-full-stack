@@ -24,6 +24,9 @@ from email_utils import send_password_reset_email
 from config import settings
 
 import models
+import database
+
+
 router = APIRouter(redirect_slashes=False)
 
 
@@ -32,7 +35,7 @@ router = APIRouter(redirect_slashes=False)
     response_model=models.UserPrivate,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_user(user: models.UserCreate, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def create_user(user: models.UserCreate, db: Annotated[AsyncSession, Depends(database.get_db)]):
     result = await db.execute(
         select(models.User).where(func.lower(col(models.User.username)) == user.username.lower()),
     )
@@ -65,7 +68,7 @@ async def create_user(user: models.UserCreate, db: Annotated[AsyncSession, Depen
 @router.post("/token", response_model=models.Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     # Look up user by email (case-insensitive)
     # Note: OAuth2PasswordRequestForm uses "username" field, but we treat it as email
@@ -103,7 +106,7 @@ async def get_current_user( current_user: CurrentUser ):
 async def forgot_password(
     request_data: models.ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     result = await db.execute(
         select(models.User).where(
@@ -148,7 +151,7 @@ async def forgot_password(
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(
     request_data: models.ResetPasswordRequest,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     token_hash = hash_reset_token(request_data.token)
 
@@ -165,7 +168,7 @@ async def reset_password(
             detail="Invalid or expired reset token",
         )
 
-    if reset_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if reset_token.expires_at < datetime.now(timezone.utc):
         await db.delete(reset_token)
         await db.commit()
         raise HTTPException(
@@ -202,7 +205,7 @@ async def reset_password(
 async def change_password(
     password_data: models.ChangePasswordRequest,
     current_user: CurrentUser,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     if not verify_password(password_data.current_password, current_user.password_hash):
         raise HTTPException(
@@ -223,7 +226,7 @@ async def change_password(
 
 
 @router.get("/{user_id}", response_model=models.UserPublic)
-async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(database.get_db)]):
     result = await db.execute(
         select(models.User).where(col(models.User.id) == user_id),
     )
@@ -234,7 +237,7 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(models.get_
 
 
 @router.patch("/{user_id}", response_model=models.UserPrivate)
-async def update_user(user_id: int, user_update: models.UserUpdate, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def update_user(user_id: int, user_update: models.UserUpdate, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(database.get_db)]):
     if user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
     
@@ -276,7 +279,7 @@ async def update_user(user_id: int, user_update: models.UserUpdate, current_user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(models.get_db)]):
+async def delete_user(user_id: int, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(database.get_db)]):
 
     if user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this user")
@@ -302,7 +305,7 @@ async def delete_user(user_id: int, current_user: CurrentUser, db: Annotated[Asy
 @router.get("/{user_id}/posts", response_model=models.PaginatedPostsResponse)
 async def get_user_posts(
     user_id: int,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = settings.posts_per_page,
 ):
@@ -347,7 +350,7 @@ async def upload_profile_picture(
     user_id: int,
     file: UploadFile,
     current_user: CurrentUser,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     if current_user.id != user_id:
         raise HTTPException(
@@ -387,7 +390,7 @@ async def upload_profile_picture(
 async def delete_user_picture(
     user_id: int,
     current_user: CurrentUser,
-    db: Annotated[AsyncSession, Depends(models.get_db)],
+    db: Annotated[AsyncSession, Depends(database.get_db)],
 ):
     if current_user.id != user_id:
         raise HTTPException(

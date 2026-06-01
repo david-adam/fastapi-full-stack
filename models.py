@@ -4,8 +4,6 @@ from typing import Annotated
 from pydantic import ConfigDict, EmailStr, computed_field
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import Column, DateTime
-from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel, Relationship, Field as SQLModelField
 
 
@@ -68,6 +66,7 @@ class Post(PostBase, table=True):
         sa_column=Column(DateTime(timezone=True)),
         default_factory=lambda: datetime.now(tz=timezone.utc))]
     user_id: Annotated[int, SQLModelField(foreign_key="users.id", nullable=False, index=True)]
+    likes: Annotated[int, SQLModelField(default=0, sa_column_kwargs={"server_default": "0"})] = 0
     author: Mapped[User] = Relationship(
         sa_relationship=relationship("User", back_populates="posts"))
 
@@ -127,23 +126,3 @@ class ResetPasswordRequest(SQLModel):
 class ChangePasswordRequest(SQLModel):
     current_password: str
     new_password: str = SQLModelField(min_length=8)
-
-
-DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
-
-engine = create_async_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-
-async_session = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
-
-async def get_db():
-    async with async_session() as session:
-        yield session
-

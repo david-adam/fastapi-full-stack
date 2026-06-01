@@ -6,6 +6,7 @@ import httpx
 from sqlalchemy import delete, select, update
 
 import models
+import database
 from image_utils import PROFILE_PICS_DIR
 from main import app
 
@@ -241,7 +242,7 @@ async def clear_existing_data() -> None:
         print(f"Deleted profile pictures from {PROFILE_PICS_DIR}")
 
     # Clear database tables (order respects foreign keys)
-    async with models.async_session() as db:
+    async with database.async_session() as db:
         await db.execute(delete(models.PasswordResetToken))
         await db.execute(delete(models.Post))
         await db.execute(delete(models.User))
@@ -252,7 +253,7 @@ async def clear_existing_data() -> None:
 async def update_post_dates() -> None:
     now = datetime.now(UTC)
 
-    async with models.async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(models.Post).order_by(models.Post.id)) # type: ignore
         posts = result.scalars().all()
 
@@ -371,7 +372,7 @@ async def populate() -> None:
         print("\nUpdating post dates...")
         await update_post_dates()
 
-    await models.engine.dispose()
+    await database.engine.dispose()
 
     print("\nDone!")
     print(f"  {len(USERS)} users")
