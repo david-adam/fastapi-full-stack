@@ -1,14 +1,16 @@
+import database
 import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
 from sqlalchemy import delete, select, update
-
+from sqlmodel import col
 import models
 import database
-from image_utils import PROFILE_PICS_DIR
+from image_utils import _get_s3_client
 from main import app
+from config import settings
 
 POPULATE_IMAGES_DIR = Path("populate_images")
 
@@ -234,12 +236,20 @@ POST_44 = {
 
 
 async def clear_existing_data() -> None:
-    # Delete profile pictures from local storage
-    if PROFILE_PICS_DIR.exists():
-        for file in PROFILE_PICS_DIR.iterdir():
-            if file.is_file() and file.name != ".gitkeep":
-                file.unlink()
-        print(f"Deleted profile pictures from {PROFILE_PICS_DIR}")
+    # Delete profile pictures from S3 (need DB records to know which files)
+    async with database.async_session() as db:
+        result = await db.execute(
+            select(col(models.User.image_file)).where(col(models.User.image_file).is_not(None)),
+        )
+        filenames = result.scalars().all()
+
+    if filenames:
+        s3 = _get_s3_client()
+        s3.delete_objects(
+            Bucket=settings.s3_bucket_name,
+            Delete={"Objects": [{"Key": f"profile_pics/{f}"} for f in filenames]},
+        )
+        print(f"Deleted {len(filenames)} images from S3")
 
     # Clear database tables (order respects foreign keys)
     async with database.async_session() as db:
@@ -254,7 +264,7 @@ async def update_post_dates() -> None:
     now = datetime.now(UTC)
 
     async with database.async_session() as db:
-        result = await db.execute(select(models.Post).order_by(models.Post.id)) # type: ignore
+        result = await db.execute(select(models.Post).order_by(col(models.Post.id)))
         posts = result.scalars().all()
 
         if not posts:
@@ -263,7 +273,7 @@ async def update_post_dates() -> None:
         # First post (POST_44) is the oldest - ~90 days ago
         await db.execute(
             update(models.Post)
-            .where(models.Post.id == posts[0].id) # type: ignore
+            .where(col(models.Post.id) == posts[0].id)
             .values(date_posted=now - timedelta(days=90)),
         )
 
@@ -274,7 +284,7 @@ async def update_post_dates() -> None:
             post_date = now - timedelta(days=days_ago, hours=hours_offset)
             await db.execute(
                 update(models.Post)
-                .where(models.Post.id == post.id) # type: ignore
+                .where(col(models.Post.id) == post.id)
                 .values(date_posted=post_date),
             )
 
@@ -289,7 +299,7 @@ async def populate() -> None:
         transport=transport,
         base_url="http://localhost",
     ) as client:
-        # Clear existing data (local images first, then database)
+        # Clear existing data (S3 images first, then database)
         await clear_existing_data()
 
         users: list[dict] = []
@@ -377,7 +387,7 @@ async def populate() -> None:
     print("\nDone!")
     print(f"  {len(USERS)} users")
     print(f"  {len(POSTS) + 1} posts")
-    print("  Profile pictures saved locally")
+    print("  Profile pictures uploaded to S3")
 
 
 if __name__ == "__main__":

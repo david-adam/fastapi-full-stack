@@ -24,7 +24,7 @@ async def create_db_resource(_app: FastAPI):
 
 app = FastAPI(lifespan=create_db_resource )
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/media", StaticFiles(directory="media"), name="media")
+
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(users.router, prefix="/api/users", tags=["users"])

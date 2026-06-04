@@ -5,7 +5,7 @@ from pydantic import ConfigDict, EmailStr, computed_field
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import Column, DateTime
 from sqlmodel import SQLModel, Relationship, Field as SQLModelField
-
+from config import settings
 
 class UserBase(SQLModel):
     username: Annotated[str, SQLModelField(min_length=1, max_length=50, unique=True, nullable=False)]
@@ -15,8 +15,8 @@ class UserBase(SQLModel):
     @property
     def image_path(self) -> str:
         if self.image_file:
-            return f"/media/profile_pics/{self.image_file}"
-        return "/media/profile_pics/default.jpg"
+            return f"https://{settings.s3_bucket_name}.s3.{settings.s3_region}.amazonaws.com/profile_pics/{self.image_file}"
+        return "/static/profile_pics/default.jpg"
 
 class User(UserBase, table=True):
     __tablename__ = "users" # type: ignore
