@@ -30,5 +30,11 @@ package = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "moto[s3]>=5.2.1",
+    "pytest>=9.0.3",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["."]
