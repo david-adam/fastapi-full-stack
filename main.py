@@ -8,7 +8,7 @@ from fastapi.exception_handlers import http_exception_handler, request_validatio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import col, select, func
+from sqlmodel import col, select, func, text
 from contextlib import asynccontextmanager
 from routers import posts, users
 from config import settings
@@ -29,6 +29,20 @@ templates = Jinja2Templates(directory="templates")
 
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+
+
+@app.get("/health")
+async def health_check(db: Annotated[AsyncSession, Depends(database.get_db)]):
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable"
+        ) from exc
+
+    return {"status": "healthy"}
+
 
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
