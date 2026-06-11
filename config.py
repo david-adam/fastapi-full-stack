@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str
+    database_url_direct: str
 
     secret_key: SecretStr
     algorithm: str = "HS256"

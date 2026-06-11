@@ -1,0 +1,17 @@
+
+
+gcloud services enable run.googleapis.com   
+gcloud services enable cloudbuild.googleapis.com     
+gcloud services enable artifactregistry.googleapis.com   
+
+gcloud artifacts repositories create fastapi-repo \                      
+--repository-format=docker \
+--location=asia-east2
+
+gcloud builds submit \                                  
+--tag asia-east2-docker.pkg.dev/fastapi-app-499107/fastapi-repo/fastapi_app
+
+gcloud run deploy fastapi-service \                     
+--image asia-east2-docker.pkg.dev/fastapi-app-499107/fastapi-repo/fastapi_app \
+--region asia-east2 \
+--allow-unauthenticated
