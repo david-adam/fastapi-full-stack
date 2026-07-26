@@ -21,7 +21,12 @@ class Settings(BaseSettings):
     s3_region: str = "ap-southeast-1"
     s3_access_key_id: SecretStr | None = None
     s3_secret_access_key: SecretStr | None = None
-    s3_endpoint_url: str | None = None 
+    s3_endpoint_url: str | None = None
+
+    # CloudFront delivery — optional. When unset, app-generated URLs fall
+    # back to direct S3 (compatibility mode). The value should be the scheme
+    # + host (no trailing slash), e.g. "https://d111111abcdef8.cloudfront.net".
+    cloudfront_base_url: str | None = None 
 
 
     posts_per_page: int = 10

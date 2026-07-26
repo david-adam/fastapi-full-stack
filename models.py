@@ -7,15 +7,29 @@ from sqlalchemy import Column, DateTime
 from sqlmodel import SQLModel, Relationship, Field as SQLModelField
 from config import settings
 
+
+def build_media_url(key: str) -> str:
+    """Return the public URL for an S3 object key.
+
+    When ``settings.cloudfront_base_url`` is set, the URL is served via that
+    CloudFront distribution. Otherwise, the legacy direct-S3 URL is returned
+    so existing deployments without a CDN keep working unchanged.
+    """
+    base = settings.cloudfront_base_url
+    if base:
+        return f"{base.rstrip('/')}/{key}"
+    return f"https://{settings.s3_bucket_name}.s3.{settings.s3_region}.amazonaws.com/{key}"
+
+
 class UserBase(SQLModel):
     username: Annotated[str, SQLModelField(min_length=1, max_length=50, unique=True, nullable=False)]
     image_file: Annotated[str | None, SQLModelField(max_length=200, nullable=True, default=None)] = None
-    
+
     @computed_field
     @property
     def image_path(self) -> str:
         if self.image_file:
-            return f"https://{settings.s3_bucket_name}.s3.{settings.s3_region}.amazonaws.com/profile_pics/{self.image_file}"
+            return build_media_url(f"profile_pics/{self.image_file}")
         return "/static/profile_pics/default.jpg"
 
 class User(UserBase, table=True):
