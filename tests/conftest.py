@@ -4,6 +4,9 @@ from collections.abc import AsyncGenerator
 os.environ["DATABASE_URL"] = (
     "postgresql+psycopg://postgres:postgres@localhost/test_blog"
 )
+os.environ["DATABASE_URL_DIRECT"] = (
+    "postgresql://postgres:postgres@localhost/test_blog"
+)
 os.environ["S3_BUCKET_NAME"] = "test-bucket"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
 
